@@ -26,7 +26,12 @@ async function writeStore(store: Store): Promise<void> {
 
 export async function saveResearchJob(job: TraceJob): Promise<TraceJob> {
   const store = await readStore();
-  store.jobs.push(job);
+  const index = store.jobs.findIndex((item) => item.id === job.id);
+  if (index >= 0) {
+    store.jobs[index] = job;
+  } else {
+    store.jobs.push(job);
+  }
   await writeStore(store);
   return job;
 }
