@@ -1,5 +1,5 @@
 import { LinkupClient, LinkupNoResultError } from "linkup-sdk";
-import type { TraceFinding } from "./trace-job";
+import type { TraceFinding, TraceLayer } from "./trace-job";
 
 function getClient() {
   const apiKey = process.env.LINKUP_API_KEY?.trim();
@@ -9,20 +9,17 @@ function getClient() {
   return new LinkupClient({ apiKey });
 }
 
-export function originSearchQuery(claim: string): string {
-  return `Find web sources that discuss this exact claim: "${claim}". Prefer origin or first mention, forums, news, and scientific or official pages. Return source URLs and short snippets. If the exact claim is not covered, return the closest related sources and say they are related, not confirming. If none exist, say none found.`;
-}
-
-export async function searchClaimSources(claim: string): Promise<{
+export async function searchWithQuery(input: {
   query: string;
-  findings: TraceFinding[];
-}> {
-  const query = originSearchQuery(claim);
+  round: number;
+  layer: TraceLayer;
+  seenUrls: Set<string>;
+}): Promise<TraceFinding[]> {
   const client = getClient();
 
   try {
     const response = await client.search({
-      query,
+      query: input.query,
       depth: "standard",
       outputType: "searchResults",
       maxResults: 8,
@@ -30,26 +27,26 @@ export async function searchClaimSources(claim: string): Promise<{
 
     const retrievedAt = new Date().toISOString();
     const findings: TraceFinding[] = [];
-    const seen = new Set<string>();
 
     for (const result of response.results) {
       if (result.type !== "text") continue;
-      if (seen.has(result.url)) continue;
-      seen.add(result.url);
+      if (input.seenUrls.has(result.url)) continue;
+      input.seenUrls.add(result.url);
       findings.push({
-        query,
+        query: input.query,
         source_url: result.url,
         snippet: result.content,
         stance: "unknown",
-        layer: "origin",
+        layer: input.layer,
+        round: input.round,
         retrieved_at: retrievedAt,
       });
     }
 
-    return { query, findings };
+    return findings;
   } catch (caught) {
     if (caught instanceof LinkupNoResultError) {
-      return { query, findings: [] };
+      return [];
     }
     throw caught;
   }

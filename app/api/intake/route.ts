@@ -1,9 +1,9 @@
 import { classifyIntake } from "@/lib/intake";
-import { originSearchQuery, searchClaimSources } from "@/lib/linkup";
+import { runResearchLoop } from "@/lib/research-loop";
 import { saveResearchJob } from "@/lib/trace-store";
 import type { TraceJob } from "@/lib/trace-job";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 function emptyJob(claim: string, mode: TraceJob["mode"]): TraceJob {
   return {
@@ -15,8 +15,9 @@ function emptyJob(claim: string, mode: TraceJob["mode"]): TraceJob {
     memory: {
       origin_hypothesis: null,
       open_gaps: [],
-      next_query: mode === "research" ? originSearchQuery(claim) : null,
+      next_query: null,
       stop_reason: null,
+      trail: [],
     },
   };
 }
@@ -49,17 +50,14 @@ export async function POST(request: Request) {
   }
 
   const job = emptyJob(claim, "research");
+  await saveResearchJob(job);
 
   try {
-    const { findings } = await searchClaimSources(claim);
-    job.findings = findings;
-    job.memory.stop_reason = "single_search";
+    const finished = await runResearchLoop(job);
+    return Response.json({ job: finished });
   } catch (caught) {
     const message =
       caught instanceof Error ? caught.message : "Linkup search failed.";
-    return Response.json({ error: message }, { status: 502 });
+    return Response.json({ error: message, job }, { status: 502 });
   }
-
-  await saveResearchJob(job);
-  return Response.json({ job });
 }
