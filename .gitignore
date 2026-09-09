@@ -1,1 +1,3 @@
 docs/internal
+.env.local
+.env
