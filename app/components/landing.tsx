@@ -140,12 +140,40 @@ export function Landing() {
             {view.job.claim}
           </h2>
           <p className="mt-6 text-sm leading-6 text-zinc-400">
-            Research job created. Linkup is not wired yet, so findings stay
-            empty.
+            One Linkup search. Sources below are raw url + snippet — the
+            follow-up loop is not wired yet.
           </p>
-          <pre className="mt-4 overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-xs leading-6 text-lime-200">
-            {JSON.stringify(view.job, null, 2)}
-          </pre>
+          {view.job.memory.next_query ? (
+            <p className="mt-3 text-xs leading-5 text-zinc-500">
+              Query: {view.job.memory.next_query}
+            </p>
+          ) : null}
+          {view.job.findings.length === 0 ? (
+            <p className="mt-6 rounded-lg border border-dashed border-zinc-700 px-4 py-5 text-sm text-zinc-400">
+              Linkup returned no text sources for this claim.
+            </p>
+          ) : (
+            <ul className="mt-6 space-y-3">
+              {view.job.findings.map((finding) => (
+                <li
+                  key={finding.source_url}
+                  className="rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-4"
+                >
+                  <a
+                    href={finding.source_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="break-all text-sm font-medium text-lime-300 hover:text-lime-200"
+                  >
+                    {finding.source_url}
+                  </a>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    {finding.snippet}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </main>
       </div>
     );
@@ -184,7 +212,7 @@ export function Landing() {
                   {card.claim}
                 </span>
                 <span className="mt-4 text-sm text-zinc-500">
-                  {card.mode === "easter_egg" ? "Trace now" : "Open intake"}
+                  {card.mode === "easter_egg" ? "Trace now" : "Search the web"}
                 </span>
               </button>
             </li>
@@ -207,7 +235,7 @@ export function Landing() {
               disabled={pending}
               className="rounded-lg bg-zinc-100 px-5 py-3 text-sm font-medium text-zinc-950 hover:bg-white disabled:opacity-60"
             >
-              {pending ? "Creating…" : "Trace"}
+              {pending ? "Searching…" : "Trace"}
             </button>
           </div>
           {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
