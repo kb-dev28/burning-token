@@ -1,28 +1,70 @@
 "use client";
 
-import { useState } from "react";
+import { FormEvent, useState } from "react";
+import { classifyIntake } from "@/lib/intake";
 import {
   NERDCONF_DISCLAIMER,
   SEED_CARDS,
   type SeedCard,
 } from "@/lib/seed-cards";
+import type { TraceJob } from "@/lib/trace-job";
 
 type View =
   | { kind: "home" }
-  | { kind: "easter_egg"; card: SeedCard }
-  | { kind: "mock"; card: SeedCard };
+  | { kind: "easter_egg"; claim: string }
+  | { kind: "job"; job: TraceJob };
 
 export function Landing() {
   const [view, setView] = useState<View>({ kind: "home" });
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
+  const [customClaim, setCustomClaim] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function openCard(card: SeedCard) {
-    setDisclaimerOpen(false);
-    if (card.mode === "easter_egg") {
-      setView({ kind: "easter_egg", card });
+  async function startResearch(raw: string) {
+    const { claim, mode } = classifyIntake(raw);
+    setError(null);
+
+    if (!claim) {
+      setError("Type a claim first.");
       return;
     }
-    setView({ kind: "mock", card });
+
+    if (mode === "easter_egg") {
+      setDisclaimerOpen(false);
+      setView({ kind: "easter_egg", claim });
+      return;
+    }
+
+    setPending(true);
+    try {
+      const response = await fetch("/api/intake", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ claim }),
+      });
+      const payload = (await response.json()) as {
+        job?: TraceJob;
+        error?: string;
+      };
+      if (!response.ok || !payload.job) {
+        throw new Error(payload.error ?? "Intake failed.");
+      }
+      setView({ kind: "job", job: payload.job });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Intake failed.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  function openCard(card: SeedCard) {
+    void startResearch(card.claim);
+  }
+
+  function onCustomSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void startResearch(customClaim);
   }
 
   if (view.kind === "easter_egg") {
@@ -42,7 +84,7 @@ export function Landing() {
         </header>
         <div className="flex flex-1 flex-col items-center justify-center px-4 pb-24">
           <p className="max-w-2xl text-center text-sm text-zinc-400">
-            {view.card.claim}
+            {view.claim}
           </p>
           <div className="mt-8 w-full max-w-5xl rotate-[-1.5deg] border-4 border-lime-300 bg-lime-400 px-4 py-8 text-center shadow-[8px_8px_0_0_#3f6212] sm:py-12">
             <p className="text-4xl font-black leading-none tracking-tight text-zinc-950 sm:text-6xl md:text-7xl">
@@ -75,7 +117,7 @@ export function Landing() {
     );
   }
 
-  if (view.kind === "mock") {
+  if (view.kind === "job") {
     return (
       <div className="flex flex-1 flex-col bg-zinc-950">
         <header className="flex items-center justify-between px-6 py-4">
@@ -87,20 +129,23 @@ export function Landing() {
             ← Back
           </button>
           <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-            Mock trace
+            TraceJob
           </span>
         </header>
-        <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
+        <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
           <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-            {view.card.tag}
+            {view.job.mode}
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-50">
-            {view.card.claim}
+            {view.job.claim}
           </h2>
-          <p className="mt-6 rounded-lg border border-dashed border-zinc-700 px-4 py-5 text-sm leading-6 text-zinc-400">
-            Research loop not wired yet. Linkup and Nebius stay off until later
-            steps. This card is a placeholder so the landing is not a blank page.
+          <p className="mt-6 text-sm leading-6 text-zinc-400">
+            Research job created. Linkup is not wired yet, so findings stay
+            empty.
           </p>
+          <pre className="mt-4 overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-xs leading-6 text-lime-200">
+            {JSON.stringify(view.job, null, 2)}
+          </pre>
         </main>
       </div>
     );
@@ -124,8 +169,9 @@ export function Landing() {
             <li key={card.id}>
               <button
                 type="button"
+                disabled={pending}
                 onClick={() => openCard(card)}
-                className={`flex h-full w-full flex-col rounded-xl border px-5 py-5 text-left transition hover:-translate-y-0.5 ${
+                className={`flex h-full w-full flex-col rounded-xl border px-5 py-5 text-left transition hover:-translate-y-0.5 disabled:opacity-60 ${
                   card.mode === "easter_egg"
                     ? "border-lime-400/70 bg-lime-400/10 hover:border-lime-300"
                     : "border-zinc-800 bg-zinc-900 hover:border-zinc-500"
@@ -138,12 +184,34 @@ export function Landing() {
                   {card.claim}
                 </span>
                 <span className="mt-4 text-sm text-zinc-500">
-                  {card.mode === "easter_egg" ? "Trace now" : "Mock trace"}
+                  {card.mode === "easter_egg" ? "Trace now" : "Open intake"}
                 </span>
               </button>
             </li>
           ))}
         </ul>
+        <form onSubmit={onCustomSubmit} className="mt-10 max-w-2xl">
+          <label htmlFor="custom-claim" className="text-sm text-zinc-400">
+            Or paste a rumor
+          </label>
+          <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+            <input
+              id="custom-claim"
+              value={customClaim}
+              onChange={(event) => setCustomClaim(event.target.value)}
+              placeholder="New national holiday announced for this Friday."
+              className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-50 outline-none placeholder:text-zinc-600 focus:border-zinc-500"
+            />
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-lg bg-zinc-100 px-5 py-3 text-sm font-medium text-zinc-950 hover:bg-white disabled:opacity-60"
+            >
+              {pending ? "Creating…" : "Trace"}
+            </button>
+          </div>
+          {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
+        </form>
       </main>
     </div>
   );
