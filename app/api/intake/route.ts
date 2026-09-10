@@ -1,9 +1,10 @@
 import { classifyIntake } from "@/lib/intake";
+import { synthesizeTrace } from "@/lib/nebius";
 import { runResearchLoop } from "@/lib/research-loop";
 import { saveResearchJob } from "@/lib/trace-store";
 import type { TraceJob } from "@/lib/trace-job";
 
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 function emptyJob(claim: string, mode: TraceJob["mode"]): TraceJob {
   return {
@@ -19,6 +20,7 @@ function emptyJob(claim: string, mode: TraceJob["mode"]): TraceJob {
       stop_reason: null,
       trail: [],
     },
+    synthesis: null,
   };
 }
 
@@ -54,10 +56,12 @@ export async function POST(request: Request) {
 
   try {
     const finished = await runResearchLoop(job);
+    finished.synthesis = await synthesizeTrace(finished);
+    await saveResearchJob(finished);
     return Response.json({ job: finished });
   } catch (caught) {
     const message =
-      caught instanceof Error ? caught.message : "Linkup search failed.";
+      caught instanceof Error ? caught.message : "Trace failed.";
     return Response.json({ error: message, job }, { status: 502 });
   }
 }

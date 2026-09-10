@@ -37,6 +37,24 @@ export type TraceMemory = {
   trail: TraceTrailStep[];
 };
 
+export type TraceCitation = {
+  url: string;
+  why: string;
+};
+
+export type TraceSynthesis = {
+  paranoia_score: number;
+  paranoia_label: string;
+  trace_summary: string;
+  citations: TraceCitation[];
+  uncertainty: string[];
+  contradictions: string[];
+  latency_ms: number;
+  tokens_in: number;
+  tokens_out: number;
+  model: string;
+};
+
 export type TraceJob = {
   id: string;
   claim: string;
@@ -44,4 +62,5 @@ export type TraceJob = {
   created_at: string;
   findings: TraceFinding[];
   memory: TraceMemory;
+  synthesis: TraceSynthesis | null;
 };
