@@ -18,7 +18,7 @@ Fill `.env.local` (never commit real keys):
 ```
 LINKUP_API_KEY=
 NEBIUS_API_KEY=
-NEBIUS_BASE_URL=https://api.tokenfactory.nebius.com/v1/
+NEBIUS_BASE_URL=https://api.tokenfactory.us-central1.nebius.com/v1/chat/completions
 NEBIUS_MODEL=
 ```
 

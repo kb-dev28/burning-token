@@ -34,6 +34,11 @@ export function TraceResult({
   const latencySec = synthesis
     ? (synthesis.latency_ms / 1000).toFixed(1)
     : null;
+  const uncertainty = synthesis?.uncertainty ?? [];
+  const contradictions = synthesis?.contradictions ?? [];
+  const citations = synthesis?.citations ?? [];
+  const findings = job.findings ?? [];
+  const trail = job.memory?.trail ?? [];
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-950">
@@ -92,15 +97,32 @@ export function TraceResult({
             <p className="mt-3 text-base leading-7 text-zinc-300">
               {synthesis.trace_summary}
             </p>
-            {synthesis.uncertainty.length > 0 ? (
+            {uncertainty.length > 0 ? (
               <p className="mt-4 text-sm leading-6 text-zinc-500">
-                Unconfirmed: {synthesis.uncertainty.join(" · ")}
+                Unconfirmed: {uncertainty.join(" · ")}
               </p>
             ) : null}
-            {synthesis.contradictions.length > 0 ? (
+            {contradictions.length > 0 ? (
               <p className="mt-2 text-sm leading-6 text-zinc-500">
-                Contradictions: {synthesis.contradictions.join(" · ")}
+                Contradictions: {contradictions.join(" · ")}
               </p>
+            ) : null}
+            {citations.length > 0 ? (
+              <ul className="mt-4 space-y-2">
+                {citations.map((cite) => (
+                  <li key={cite.url} className="text-sm leading-6 text-zinc-500">
+                    <a
+                      href={cite.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-lime-300 hover:text-lime-200"
+                    >
+                      {hostOf(cite.url)}
+                    </a>
+                    {cite.why ? ` — ${cite.why}` : ""}
+                  </li>
+                ))}
+              </ul>
             ) : null}
           </section>
         ) : null}
@@ -130,14 +152,14 @@ export function TraceResult({
           <p className="text-xs uppercase tracking-[0.18em] text-lime-300">
             Evidence board
           </p>
-          {job.findings.length === 0 ? (
+          {findings.length === 0 ? (
             <p className="mt-4 rounded-lg border border-dashed border-zinc-700 px-4 py-5 text-sm text-zinc-400">
               No sources saved for this claim.
             </p>
           ) : (
             <div className="mt-4 space-y-8">
               {LAYERS.map((layer) => {
-                const items = findingsByLayer(job.findings, layer.id);
+                const items = findingsByLayer(findings, layer.id);
                 if (items.length === 0) return null;
                 return (
                   <div key={layer.id}>
@@ -181,7 +203,7 @@ export function TraceResult({
             Research trail
           </p>
           <ol className="mt-4 space-y-3">
-            {(job.memory.trail ?? []).map((step) => (
+            {trail.map((step) => (
               <li
                 key={step.round}
                 className="rounded-xl border border-zinc-800 px-4 py-4"

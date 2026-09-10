@@ -112,12 +112,13 @@ export async function synthesizeTrace(job: TraceJob): Promise<TraceSynthesis> {
   const latency_ms = Date.now() - started;
 
   const message = response.choices[0]?.message;
+  const rawContent: unknown = message?.content;
   const content =
-    typeof message?.content === "string"
-      ? message.content
-      : Array.isArray(message?.content)
-        ? message.content
-            .map((part) =>
+    typeof rawContent === "string"
+      ? rawContent
+      : Array.isArray(rawContent)
+        ? rawContent
+            .map((part: unknown) =>
               typeof part === "object" && part && "text" in part
                 ? String((part as { text: unknown }).text)
                 : "",
@@ -159,6 +160,8 @@ export async function synthesizeTrace(job: TraceJob): Promise<TraceSynthesis> {
       typeof parsed.trace_summary === "string"
         ? parsed.trace_summary
         : "Not enough grounded evidence to summarize.",
+    citations,
+    uncertainty: asStringArray(parsed.uncertainty),
     contradictions: asStringArray(parsed.contradictions),
     latency_ms,
     tokens_in: response.usage?.prompt_tokens ?? 0,
