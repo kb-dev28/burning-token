@@ -2,7 +2,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { TraceJob } from "./trace-job";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+const DATA_DIR = process.env.VERCEL
+  ? path.join("/tmp", "burn-faike")
+  : path.join(process.cwd(), "data");
 const STORE_PATH = path.join(DATA_DIR, "traces.json");
 
 type Store = {
