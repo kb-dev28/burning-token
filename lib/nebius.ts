@@ -145,6 +145,10 @@ export async function synthesizeTrace(job: TraceJob): Promise<TraceSynthesis> {
     return [{ url, why }];
   });
 
+  console.info(
+    `[nebius] model=${model} latency_ms=${latency_ms} tokens_in=${response.usage?.prompt_tokens ?? 0} tokens_out=${response.usage?.completion_tokens ?? 0}`,
+  );
+
   return {
     paranoia_score,
     paranoia_label:
@@ -155,8 +159,6 @@ export async function synthesizeTrace(job: TraceJob): Promise<TraceSynthesis> {
       typeof parsed.trace_summary === "string"
         ? parsed.trace_summary
         : "Not enough grounded evidence to summarize.",
-    citations,
-    uncertainty: asStringArray(parsed.uncertainty),
     contradictions: asStringArray(parsed.contradictions),
     latency_ms,
     tokens_in: response.usage?.prompt_tokens ?? 0,
@@ -164,3 +166,4 @@ export async function synthesizeTrace(job: TraceJob): Promise<TraceSynthesis> {
     model,
   };
 }
+

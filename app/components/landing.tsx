@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { classifyIntake } from "@/lib/intake";
+import { TraceResult } from "@/app/components/trace-result";
 import {
   NERDCONF_DISCLAIMER,
   SEED_CARDS,
@@ -121,156 +122,14 @@ export function Landing() {
 
   if (view.kind === "job") {
     return (
-      <div className="flex flex-1 flex-col bg-zinc-950">
-        <header className="flex items-center justify-between px-6 py-4">
-          <button
-            type="button"
-            onClick={() => setView({ kind: "home" })}
-            className="text-sm text-zinc-400 hover:text-zinc-200"
-          >
-            ← Back
-          </button>
-          <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-            TraceJob
-          </span>
-        </header>
-        <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
-          <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-            {view.job.mode}
-          </p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-50">
-            {view.job.claim}
-          </h2>
-          {error ? (
-            <p className="mt-4 text-sm text-red-400">{error}</p>
-          ) : null}
-          {view.job.synthesis ? (
-            <section className="mt-8 rounded-xl border border-lime-400/30 bg-lime-400/5 px-5 py-5">
-              <p className="text-xs uppercase tracking-[0.18em] text-lime-300">
-                Synthesis · Nebius
-              </p>
-              <p className="mt-3 text-3xl font-semibold text-zinc-50">
-                {view.job.synthesis.paranoia_score}%{" "}
-                <span className="text-lg font-normal text-zinc-300">
-                  {view.job.synthesis.paranoia_label}
-                </span>
-              </p>
-              <p className="mt-4 text-sm leading-6 text-zinc-300">
-                {view.job.synthesis.trace_summary}
-              </p>
-              <p className="mt-4 text-xs text-zinc-500">
-                {view.job.synthesis.latency_ms} ms ·{" "}
-                {view.job.synthesis.tokens_in} in /{" "}
-                {view.job.synthesis.tokens_out} out · {view.job.synthesis.model}
-              </p>
-              {view.job.synthesis.citations.length > 0 ? (
-                <ul className="mt-4 space-y-2">
-                  {view.job.synthesis.citations.map((cite) => (
-                    <li key={cite.url} className="text-sm leading-6 text-zinc-400">
-                      <a
-                        href={cite.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="break-all text-lime-300 hover:text-lime-200"
-                      >
-                        {cite.url}
-                      </a>
-                      {cite.why ? ` — ${cite.why}` : ""}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {view.job.synthesis.uncertainty.length > 0 ? (
-                <p className="mt-4 text-xs leading-5 text-zinc-500">
-                  Unconfirmed: {view.job.synthesis.uncertainty.join(" · ")}
-                </p>
-              ) : null}
-              {view.job.synthesis.contradictions.length > 0 ? (
-                <p className="mt-2 text-xs leading-5 text-zinc-500">
-                  Contradictions:{" "}
-                  {view.job.synthesis.contradictions.join(" · ")}
-                </p>
-              ) : null}
-            </section>
-          ) : null}
-          <p className="mt-6 text-sm leading-6 text-zinc-400">
-            Linkup loop: search → save → gaps → next query. Max 3 rounds.
-            Stop: {view.job.memory.stop_reason ?? "unknown"}.
-          </p>
-          {view.job.memory.open_gaps.length > 0 ? (
-            <p className="mt-2 text-xs text-zinc-500">
-              Open gaps: {view.job.memory.open_gaps.join(", ")}
-            </p>
-          ) : (
-            <p className="mt-2 text-xs text-zinc-500">Gaps covered.</p>
-          )}
-          <ol className="mt-8 space-y-4">
-            {(view.job.memory.trail ?? []).map((step) => (
-              <li
-                key={step.round}
-                className="rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-4"
-              >
-                <p className="text-xs uppercase tracking-[0.16em] text-lime-300">
-                  Round {step.round} · {step.goal}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-zinc-300">
-                  {step.query}
-                </p>
-                {step.triggered_by_url ? (
-                  <p className="mt-3 text-xs leading-5 text-zinc-500">
-                    Triggered by{" "}
-                    <a
-                      href={step.triggered_by_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="break-all text-lime-300 hover:text-lime-200"
-                    >
-                      {step.triggered_by_url}
-                    </a>
-                    {step.triggered_by_why ? ` — ${step.triggered_by_why}` : ""}
-                  </p>
-                ) : (
-                  <p className="mt-3 text-xs text-zinc-500">
-                    Seed query. No prior finding.
-                  </p>
-                )}
-                <p className="mt-2 text-xs text-zinc-500">
-                  New sources: {step.new_result_count}
-                </p>
-              </li>
-            ))}
-          </ol>
-          {view.job.findings.length === 0 ? (
-            <p className="mt-6 rounded-lg border border-dashed border-zinc-700 px-4 py-5 text-sm text-zinc-400">
-              Linkup returned no text sources for this claim.
-            </p>
-          ) : (
-            <ul className="mt-8 space-y-3">
-              {view.job.findings.map((finding) => (
-                <li
-                  key={`${finding.round}-${finding.source_url}`}
-                  className="rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-4"
-                >
-                  <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">
-                    V{finding.round} · {finding.layer} · {finding.stance}
-                  </p>
-                  <a
-                    href={finding.source_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 block break-all text-sm font-medium text-lime-300 hover:text-lime-200"
-                  >
-                    {finding.source_url}
-                  </a>
-                  <p className="mt-2 text-sm leading-6 text-zinc-400">
-                    {finding.snippet}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </main>
-      </div>
+      <TraceResult
+        job={view.job}
+        error={error}
+        onBack={() => {
+          setError(null);
+          setView({ kind: "home" });
+        }}
+      />
     );
   }
 
@@ -333,7 +192,14 @@ export function Landing() {
               {pending ? "Tracing…" : "Trace"}
             </button>
           </div>
-          {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
+          {pending ? (
+            <p className="mt-3 text-sm text-zinc-500">
+              Searching the web, then synthesizing. This can take ~10–30s.
+            </p>
+          ) : null}
+          {error ? (
+            <p className="mt-3 text-sm text-red-400">{error}</p>
+          ) : null}
         </form>
       </main>
     </div>
