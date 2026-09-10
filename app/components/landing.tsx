@@ -47,10 +47,12 @@ export function Landing() {
         job?: TraceJob;
         error?: string;
       };
+      if (payload.job) {
+        setView({ kind: "job", job: payload.job });
+      }
       if (!response.ok || !payload.job) {
         throw new Error(payload.error ?? "Intake failed.");
       }
-      setView({ kind: "job", job: payload.job });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Intake failed.");
     } finally {
@@ -139,6 +141,58 @@ export function Landing() {
           <h2 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-50">
             {view.job.claim}
           </h2>
+          {error ? (
+            <p className="mt-4 text-sm text-red-400">{error}</p>
+          ) : null}
+          {view.job.synthesis ? (
+            <section className="mt-8 rounded-xl border border-lime-400/30 bg-lime-400/5 px-5 py-5">
+              <p className="text-xs uppercase tracking-[0.18em] text-lime-300">
+                Synthesis · Nebius
+              </p>
+              <p className="mt-3 text-3xl font-semibold text-zinc-50">
+                {view.job.synthesis.paranoia_score}%{" "}
+                <span className="text-lg font-normal text-zinc-300">
+                  {view.job.synthesis.paranoia_label}
+                </span>
+              </p>
+              <p className="mt-4 text-sm leading-6 text-zinc-300">
+                {view.job.synthesis.trace_summary}
+              </p>
+              <p className="mt-4 text-xs text-zinc-500">
+                {view.job.synthesis.latency_ms} ms ·{" "}
+                {view.job.synthesis.tokens_in} in /{" "}
+                {view.job.synthesis.tokens_out} out · {view.job.synthesis.model}
+              </p>
+              {view.job.synthesis.citations.length > 0 ? (
+                <ul className="mt-4 space-y-2">
+                  {view.job.synthesis.citations.map((cite) => (
+                    <li key={cite.url} className="text-sm leading-6 text-zinc-400">
+                      <a
+                        href={cite.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="break-all text-lime-300 hover:text-lime-200"
+                      >
+                        {cite.url}
+                      </a>
+                      {cite.why ? ` — ${cite.why}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {view.job.synthesis.uncertainty.length > 0 ? (
+                <p className="mt-4 text-xs leading-5 text-zinc-500">
+                  Unconfirmed: {view.job.synthesis.uncertainty.join(" · ")}
+                </p>
+              ) : null}
+              {view.job.synthesis.contradictions.length > 0 ? (
+                <p className="mt-2 text-xs leading-5 text-zinc-500">
+                  Contradictions:{" "}
+                  {view.job.synthesis.contradictions.join(" · ")}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
           <p className="mt-6 text-sm leading-6 text-zinc-400">
             Linkup loop: search → save → gaps → next query. Max 3 rounds.
             Stop: {view.job.memory.stop_reason ?? "unknown"}.
