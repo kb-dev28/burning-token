@@ -1,24 +1,52 @@
 # Burn fAIke
 
-**The AI-Powered Conspiracy & Viral Rumor Trace Engine.**
+**Trace a rumor before it moves a price.**
 
-Click a rumor. Burn fAIke researches where it may have started, how it mutated as it spread, and what the available evidence looks like.
+An AI rumor-trace agent for **trading desks**. You submit a claim and get a **provenance trail**, not a true/false verdict: research rounds, sources, uncertainty, contradictions, and a **Paranoia Meter**.
 
-It is a **context engine, not a truth judge**: instead of forcing a single true/false verdict, it gives you a research trail, sources, uncertainty, contradictions, and a **Paranoia Meter**.
+This repository is the intake API (Linkup + Nebius). The public product is the 1-bit UI.
 
-Anyone can try it. **No login required.**
+**No login required.**
 
 ## Live Demo
 
-**https://burn-faike.vercel.app** — no login.
+**https://kb-dev28.github.io/burnfaike-front/**
+
+UI repo: https://github.com/kb-dev28/burnfaike-front
 
 **[Burning Token project](https://app.burningtoken.dev/dashboard/projects/dbe481c5-7c32-49f2-a897-bdbf8163f2fc/edit)**
+
+## CORS
+
+`POST /api/intake` is called from the Vite frontend on another origin.
+
+Allowed browser origins (plus optional `CORS_ORIGINS` on Vercel, comma-separated):
+
+- `http://localhost:5173`
+- `http://127.0.0.1:5173`
+- `http://localhost:4173`
+- `http://127.0.0.1:4173`
+- `https://kb-dev28.github.io`
+
+The designer’s Pages host (`https://gauthierdewilliencourt.github.io`) is **not** allowed.
+
+Preflight: `OPTIONS /api/intake` → `204`.
+
+These headers are in `app/api/intake/route.ts`. They apply on Vercel only after you deploy this repo.
+
+## Public UI (the product)
+
+https://kb-dev28.github.io/burnfaike-front/
+
+Fork: https://github.com/kb-dev28/burnfaike-front.git
+
+That Vite UI calls this API with `POST /api/intake`. Browser origin: `https://kb-dev28.github.io`.
 
 ---
 
 ## What judges should click
 
-For the fastest demo, try these three cards:
+Open **https://kb-dev28.github.io/burnfaike-front/** (no login). Fastest path:
 
 ### 1. NERDCONF card
 
@@ -313,20 +341,20 @@ Start the development server:
 npm run dev
 ```
 
-Then open:
+The local API is `http://localhost:3000`. The public demo judges should open is:
 
 ```text
-http://localhost:3000
+https://kb-dev28.github.io/burnfaike-front/
 ```
 
 ---
 
 ## Tech Stack
 
-* **Next.js** — App Router
+* **1-bit Vite UI** — public demo at https://kb-dev28.github.io/burnfaike-front/
+* **Next.js** — App Router, `POST /api/intake`
 * **Linkup SDK** — web research
 * **Nebius Token Factory** — AI inference and synthesis
-* **Tailwind CSS** — UI
 
 ---
 
@@ -380,11 +408,13 @@ User
 
 ## The Core Idea
 
-Most rumor tools try to answer:
+Trading desks do not need another true/false button. They need to know if a claim can move a price before the tape does.
+
+Most rumor tools ask:
 
 **“Is this true?”**
 
-Burn fAIke asks a different question:
+Burn fAIke asks:
 
 **“How did this rumor get here, what happened to it along the way, and what does the available evidence actually show?”**
 
