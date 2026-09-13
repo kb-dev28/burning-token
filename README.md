@@ -2,246 +2,141 @@
 
 **Trace a rumor before it moves a price.**
 
-An AI rumor-trace agent for **trading desks**. You submit a claim and get a **provenance trail**, not a true/false verdict: research rounds, sources, uncertainty, contradictions, and a **Paranoia Meter**.
+Burn fAIke is an AI-powered rumor tracing agent for trading desks.
 
-This repository is the intake API (Linkup + Nebius). The public product is the 1-bit UI.
+Instead of returning a simple **true/false** answer, it reconstructs a claim's research trail:
 
-**No login required.**
+* Where the claim may have originated
+* How it may have mutated or recirculated
+* What evidence supports or contradicts it
+* What remains uncertain
+* How suspicious the overall trail looks
+
+The result is a **provenance trail**, not a claim of absolute truth.
 
 ## Live Demo
 
-**https://kb-dev28.github.io/burnfaike-front/**
+[**Open Burn fAIke**](https://kb-dev28.github.io/burnfaike-front/)
 
-UI repo: https://github.com/kb-dev28/burnfaike-front
+No login required.
 
-**[Burning Token project](https://app.burningtoken.dev/dashboard/projects/dbe481c5-7c32-49f2-a897-bdbf8163f2fc/edit)**
+### Recommended demo flow
 
-## CORS
+For the clearest demonstration of the product:
 
-`POST /api/intake` is called from the Vite frontend on another origin.
+1. **GameStop / Reddit** — see how a market-moving narrative can be traced across sources.
+2. **Tesla / “Funding Secured”** — see a financial claim with a clearer historical evidence trail.
+3. **Bitcoin / China mining rumors** — see a more ambiguous case where uncertainty matters.
+4. **NERDCONF** — try the deliberately absurd easter egg.
+5. Or paste your own rumor.
 
-Allowed browser origins (plus optional `CORS_ORIGINS` on Vercel, comma-separated):
-
-- `http://localhost:5173`
-- `http://127.0.0.1:5173`
-- `http://localhost:4173`
-- `http://127.0.0.1:4173`
-- `https://kb-dev28.github.io`
-
-The designer’s Pages host (`https://gauthierdewilliencourt.github.io`) is **not** allowed.
-
-Preflight: `OPTIONS /api/intake` → `204`.
-
-These headers are in `app/api/intake/route.ts`. They apply on Vercel only after you deploy this repo.
-
-## Public UI (the product)
-
-https://kb-dev28.github.io/burnfaike-front/
-
-Fork: https://github.com/kb-dev28/burnfaike-front.git
-
-That Vite UI calls this API with `POST /api/intake`. Browser origin: `https://kb-dev28.github.io`.
-
----
-
-## What judges should click
-
-Open **https://kb-dev28.github.io/burnfaike-front/** (no login). Fastest path:
-
-### 1. NERDCONF card
-
-The **NERDCONF easter egg** immediately shows:
-
-> **YES! 100% FACTUALLY VERIFIED**
-
-It intentionally bypasses web research and model inference. Click the `i` icon to see the disclaimer.
-
-### 2. Avocado pits card
-
-Wait approximately **10–40 seconds** for the research trace.
-
-You will see:
-
-* Paranoia Meter
-* Trace Summary
-* Evidence Board
-* Sources grouped by research layer
-* Research trail: **V1 → V2 → V3**
-* Latency
-* Token usage
-
-This is the main **Linkup + Nebius** path.
-
-### 3. Whisper-to-router Wi-Fi card
-
-This is the intentionally difficult evaluation case.
-
-The product still returns a result, but the model can become too confident and produce an unsupported origin narrative.
-
-This is shown deliberately as a **failure case**, not hidden as a crash.
-
-You can also paste any other rumor into the input for a custom trace.
-
----
-
-## Tracks
-
-| Track                                 | How Burn fAIke uses it                                                                                                                                                      |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Deep Research · Linkup**            | Every research search goes through Linkup. Findings are stored, gaps influence the next query, and the research trail shows the queries and why they were made.             |
-| **Applied AI · Nebius Token Factory** | Nebius performs the main synthesis from the saved research pack: paranoia score, summary, citations, uncertainty, and contradictions. Latency and token usage are measured. |
-| **Fun Build · NERDCONF**              | A playful zero-friction interaction with rumor cards, the Paranoia Meter, and a NERDCONF easter egg.                                                                        |
-
-### Not part of this MVP
-
-RevenueCat, Convex, Render, authentication, wallets, and onchain functionality are **not used**.
-
----
-
-## How a trace works
+## How it works
 
 ```text
-card or pasted claim
-        │
-        ▼
-NERDCONF easter egg?
-        │
-   yes  │  no
-        ▼
-banner only          Linkup search
-(no web, no AI)           │
-                          ▼
-                   store findings
-                          │
-                          ▼
-                     find gaps
-                          │
-                          ▼
-                  follow-up search
-                     (max 3 rounds)
-                          │
-                          ▼
-              Nebius reads ONLY the
-               saved research pack
-                          │
-                          ▼
-          score + summary + citations
-          uncertainty + contradictions
-                          │
-                          ▼
-        Paranoia Meter + Evidence Board
-        research trail + latency/tokens
+Claim
+  │
+  ▼
+Linkup web research
+  │
+  ▼
+Save findings
+  │
+  ▼
+Detect research gaps
+  │
+  ▼
+Follow-up searches
+  │
+  ▼
+Research Pack
+  │
+  ▼
+Nebius Token Factory
+  │
+  ▼
+Structured synthesis
+  │
+  ├── Paranoia Score
+  ├── Summary
+  ├── Uncertainty
+  └── Contradictions
+  │
+  ▼
+Evidence Board + Research Trail
 ```
 
-The research process is intentionally separated from synthesis:
+The key design choice is the separation between **research and synthesis**:
 
-**Linkup researches. Nebius synthesizes.**
+> **Linkup researches. Nebius synthesizes.**
 
-Nebius does not perform its own web searches. It receives only the findings collected during the Linkup research process.
-
-The application also validates citations after inference: if a citation URL does not exist in the saved research findings, it is discarded.
-
----
+Nebius does not perform independent web searches. It receives only the findings collected by the Linkup research process. Citation URLs are also validated against the saved research findings.
 
 ## Deep Research with Linkup
 
-Burn fAIke uses Linkup as the web research layer.
+Each trace can run up to **three research rounds**:
 
-A research trace can run up to **three rounds**:
+| Round  | Goal                                      |
+| ------ | ----------------------------------------- |
+| **V1** | Find the possible origin / first mentions |
+| **V2** | Investigate mutation and recirculation    |
+| **V3** | Check evidence and counter-evidence       |
 
-| Round  | Purpose                                   | Example                               |
-| ------ | ----------------------------------------- | ------------------------------------- |
-| **V1** | Find the possible origin / first mentions | `"{claim}" origin OR "first mention"` |
-| **V2** | Investigate mutation and recirculation    | Search gaps found in V1               |
-| **V3** | Check evidence and counter-evidence       | Studies, official sources, debunks    |
+The UI exposes the process as a **Research Trail**, showing what was searched, why another search was triggered, and what sources were found.
 
-The application stores findings from each round and uses the gaps in the current research pack to determine what to investigate next.
+## Applied AI with Nebius
 
-The UI exposes this process as a **Research Trail**, so the user can see:
+Nebius Token Factory receives the saved research pack and produces a structured synthesis containing:
 
-* What was searched
-* Which round it belonged to
-* Why another search was triggered
-* Which sources were found
+* **Paranoia Score:** 0–100
+* **Trace Summary**
+* **Citations**
+* **Uncertainty**
+* **Contradictions**
 
-The goal is not simply to retrieve links, but to show how the research evolves.
+The application also measures **time-to-trace** and token usage.
 
----
+### Paranoia Meter
 
-## Applied AI with Nebius Token Factory
-
-Nebius Token Factory performs the main synthesis step.
-
-The model receives the saved research findings and produces a structured result:
+The score is a contextual signal about the claim and its research trail:
 
 ```text
-paranoia_score       0–100
-
-paranoia_label       0   Boring Official Fact
-                     50  Unverified Internet Gossip
-                    100  Pure Underground Conspiracy
-
-trace_summary        2–4 sentences covering
-                     origin, mutation and plausibility
-
-citations            [{ url, why }]
-                     only URLs found in the research pack
-
-uncertainty           what could not be confirmed
-
-contradictions        conflicts between sources
+0    Boring Official Fact
+50   Unverified Internet Gossip
+100  Pure Underground Conspiracy
 ```
 
-The application also records:
+It is **not a scientific probability of truth**.
 
-* Time-to-trace
-* Input tokens
-* Output tokens
+## Built for the hackathon tracks
 
-API keys remain server-side and are never exposed to the browser.
+| Track                                 | Implementation                                                                                        |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Deep Research · Linkup**            | Multi-round web research, stored findings, gap-driven follow-up queries and visible research trail    |
+| **Applied AI · Nebius Token Factory** | Structured synthesis from the research pack, including score, summary, uncertainty and contradictions |
+| **Fun Build · NERDCONF**              | Rumor cards, Paranoia Meter, fast interactions and a deliberately absurd easter egg                   |
 
----
+## NERDCONF Easter Egg
 
-## NERDCONF Fun Build
+For the intentionally ridiculous claim:
 
-Burn fAIke includes a deliberately absurd NERDCONF easter egg.
+**“Are the nerds at NERDCONF the most handsome developers in the world?”**
 
-For the claim:
-
-> **Are the nerds at NERDCONF the most handsome developers in the world?**
-
-the app skips research and displays:
+Burn fAIke returns:
 
 > **YES! 100% FACTUALLY VERIFIED**
 
-with an information disclaimer explaining that this is a subjective local override.
+This is a local easter egg. It intentionally skips both Linkup and Nebius and displays a disclaimer explaining that it is a subjective override.
 
-This interaction is intentionally separate from the research pipeline: **zero Linkup searches and zero Nebius inference are performed.**
+## Evaluation
 
----
+Measured locally on **September 10, 2026**:
 
-## Evaluation Snapshot
-
-**Measured on September 10, 2026**
-
-Measurements were taken locally through:
-
-```text
-POST /api/intake
-```
-
-For this evaluation, **citation accuracy** means whether the final `citations` field introduced a URL that was not present in the Linkup research findings.
-
-Cost is an estimate based on public Token Factory / OpenRouter list prices, not the dashboard invoice.
-
-| # | Claim                                  | Invented citation URLs? | Time-to-trace | Tokens in / out | Notes                                                                               |
-| - | -------------------------------------- | ----------------------- | ------------- | --------------- | ----------------------------------------------------------------------------------- |
-| 1 | Avocado pits / microwave               | No (`citations: []`)    | 12.55 s       | 3466 / 579      | Score 35. Useful research, but the origin of this specific myth remains weak.       |
-| 2 | National holiday this Friday           | No (`citations: []`)    | 12.79 s       | 3413 / 572      | Score 42. The country is unspecified, so the research can fall back to US results.  |
-| 3 | NERDCONF handsome developers           | N/A                     | 0.01 s        | 0 / 0           | Easter egg bypass.                                                                  |
-| 4 | Whisper to the router for faster Wi-Fi | No (`citations: []`)    | 13.88 s       | 3782 / 551      | **Failure case:** score 92, empty uncertainty, and an unsupported origin narrative. |
-
-### Research totals
+| Claim                    |   Time | Score | Result                                    |
+| ------------------------ | -----: | ----: | ----------------------------------------- |
+| Avocado pits / microwave | 12.55s |    35 | Useful research; origin remains uncertain |
+| National holiday         | 12.79s |    42 | Country ambiguity affected the research   |
+| NERDCONF                 |  0.01s |   100 | Easter egg, no API calls                  |
+| Wi-Fi whisper            | 13.88s |    92 | **Intentional failure case**              |
 
 Across the three research cases:
 
@@ -249,166 +144,39 @@ Across the three research cases:
 * **~10.7k input tokens**
 * **~1.7k output tokens**
 
-The NERDCONF easter egg is excluded from research totals because it does not call Linkup or Nebius.
+The evaluation also exposed an important limitation: the model can produce a confident narrative when the evidence does not support the claimed origin. Burn fAIke deliberately shows this instead of hiding it.
 
----
+## Known limitations
 
-## Known Limitations
+This is an MVP, and its limitations are intentionally visible.
 
-This is an MVP, and the limitations are intentionally visible.
+* Structured citations can be empty even when many Linkup findings were retrieved.
+* The model can sometimes sound more confident than the evidence justifies.
+* Research is limited to up to three rounds.
+* There is no cross-session user history.
+* The Paranoia Meter is **not a truth probability**.
 
-### 1. Structured citations can be empty
+The current MVP therefore emphasizes the combination of:
 
-The `citations` field can remain empty even when the Evidence Board contains **20+ Linkup findings**.
+**Score + Summary + Evidence Board + Research Trail**
 
-The most useful output in the current MVP is therefore:
-
-**score + summary + Evidence Board + research trail**
-
-rather than the structured citation field alone.
-
-### 2. The failure case can look confident
-
-The Wi-Fi whisper case demonstrates an important limitation: the model can produce a high score and a confident-sounding narrative even when the evidence does not support the claimed origin.
-
-The application does **not** hide this result.
-
-### 3. No cross-session history
-
-Findings are persisted per research job using temporary server storage.
-
-There is no user account and no persistent user history across sessions.
-
-### 4. Research scope
-
-The application performs up to three research rounds. If an origin cannot be established from the available web evidence, the result can remain uncertain.
-
-### 5. No single truth verdict
-
-The Paranoia Meter is a contextual signal about the claim and its research trail.
-
-It is **not a scientific probability of truth**.
-
----
+rather than relying on a single verdict.
 
 ## Security
 
-* API keys stay on the server.
-* Keys are never sent to the browser.
-* Real keys are stored in `.env.local`.
-* `.env.local` is excluded from git.
-* Nebius does not receive unrestricted web access.
-* The model cannot introduce arbitrary citation URLs into the final result; citations are filtered against the research pack.
-
----
-
-## Run Locally
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Create your local environment file:
-
-```bash
-cp .env.example .env.local
-```
-
-Fill in:
-
-```env
-LINKUP_API_KEY=
-NEBIUS_API_KEY=
-NEBIUS_BASE_URL=https://api.tokenfactory.nebius.com/v1/
-NEBIUS_MODEL=
-```
-
-`NEBIUS_BASE_URL` must point to the `/v1/` root.
-
-Do **not** add:
-
-```text
-/chat/completions
-```
-
-The OpenAI-compatible client appends that path automatically.
-
-Start the development server:
-
-```bash
-npm run dev
-```
-
-The local API is `http://localhost:3000`. The public demo judges should open is:
-
-```text
-https://kb-dev28.github.io/burnfaike-front/
-```
-
----
+* API keys stay server-side.
+* Keys are never exposed to the browser.
+* Nebius receives the saved research pack rather than unrestricted web access.
+* Citation URLs are filtered against the research findings.
 
 ## Tech Stack
 
-* **1-bit Vite UI** — public demo at https://kb-dev28.github.io/burnfaike-front/
-* **Next.js** — App Router, `POST /api/intake`
+* **Vite + React** — public 1-bit interface
+* **Next.js** — API / research orchestration
 * **Linkup SDK** — web research
-* **Nebius Token Factory** — AI inference and synthesis
+* **Nebius Token Factory** — AI synthesis
 
----
-
-## MVP Architecture
-
-```text
-User
- │
- ├── Rumor card
- │
- └── Custom claim
-        │
-        ▼
-     Intake
-        │
-        ├── NERDCONF → Easter egg
-        │                └── no API calls
-        │
-        └── Research
-                │
-                ▼
-             Linkup
-                │
-                ▼
-          Saved findings
-                │
-                ▼
-          Gap detection
-                │
-                ▼
-        Follow-up search
-           (≤ 3 rounds)
-                │
-                ▼
-       Research pack
-                │
-                ▼
-        Nebius Token Factory
-                │
-                ▼
-      Structured synthesis
-                │
-                ▼
-      Citation validation
-                │
-                ▼
-       Burn fAIke result
-```
-
----
-
-## The Core Idea
-
-Trading desks do not need another true/false button. They need to know if a claim can move a price before the tape does.
+## Why Burn fAIke?
 
 Most rumor tools ask:
 
@@ -418,4 +186,16 @@ Burn fAIke asks:
 
 **“How did this rumor get here, what happened to it along the way, and what does the available evidence actually show?”**
 
-That makes the research process itself part of the product.
+For trading desks, the goal is not another binary verdict. It is to understand the **provenance, evidence and uncertainty behind a claim before it can influence a market.**
+
+## Built by
+
+**Karm** — Engineering, backend, research pipeline and AI integration
+
+**Gauthier De Williencourt** — UI/UX Design
+
+GitHub: [Karm's GitHub](https://github.com/kb-dev28)
+
+Design: [Gauthier's GitHub](https://github.com/GauthierDeWilliencourt/burnfaike-front)
+
+Live demo: [Burn fAIke](https://kb-dev28.github.io/burnfaike-front/)
